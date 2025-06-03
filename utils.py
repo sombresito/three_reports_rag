@@ -14,7 +14,11 @@ def save_analysis_result(uuid, analysis):
 
 def send_analysis_to_allure(uuid, analysis):
     import requests
-    allure_api = f"{get_env('ALLURE_HOST')}/api/analysis/report/{uuid}"
-    resp = requests.post(allure_api, json=analysis)
+    from requests.auth import HTTPBasicAuth
+    allure_api = f"{get_env('ALLURE_API_ANALYSIS_ENDPOINT')}/{uuid}"
+    user = get_env('ALLURE_API_USER')
+    pwd = get_env('ALLURE_API_PASSWORD')
+    resp = requests.post(allure_api, json=analysis, auth=HTTPBasicAuth(user, pwd))
     if resp.status_code != 200:
         raise Exception(f"Failed to send analysis: {resp.text}")
+
