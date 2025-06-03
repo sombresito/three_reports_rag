@@ -2,6 +2,9 @@ fastapi
 uvicorn
 requests
 python-dotenv
-sentence-transformers
+sentence-transformers==2.2.2
 qdrant-client
 matplotlib
+huggingface_hub<0.23
+transformers<4.37
+tokenizers==0.13.3
