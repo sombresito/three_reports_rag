@@ -1,5 +1,6 @@
-import os
-from fastapi import FastAPI, HTTPException, Request
+import utils
+import traceback
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from report_fetcher import fetch_allure_report
 from chunker import chunk_report
@@ -7,7 +8,8 @@ from embedder import generate_embeddings
 from qdrant_store import save_report_chunks, get_prev_report_chunks, maintain_last_n_reports
 from analyzer import analyze_reports
 from plotter import plot_trends
-from utils import get_env, save_analysis_result
+from utils import save_analysis_result
+
 
 app = FastAPI()
 
