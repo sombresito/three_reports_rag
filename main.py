@@ -27,30 +27,21 @@ async def analyze_uuid(req: AnalyzeRequest):
         report = fetch_allure_report(uuid)
         if not isinstance(report, list):
             raise HTTPException(status_code=400, detail="Report JSON must be a list of test-cases")
-        # 2. Извлечь название команды
-        team_name = None
-        for case in report:
-            for label in case.get("labels", []):
-                if label.get("name") == "suite":
-                    team_name = label.get("value")
-                    break
-            if team_name:
-                break
+        # 2. Получаем чанки и имя команды (chunk_report возвращает tuple)
+        chunks, team_name = chunk_report(report)
         if not team_name:
             team_name = "default_team"
 
-        # 3. Чанкуем тест-кейсы (может быть просто сам report, если уже чанкованные)
-        chunks, team_name = chunk_report(report)
-        # 4. Генерируем эмбеддинги
+        # 3. Генерируем эмбеддинги
         embeddings = generate_embeddings(chunks)
-        # 5. Сохраняем чанки и эмбеддинги в Qdrant
+        # 4. Сохраняем чанки и эмбеддинги в Qdrant
         save_report_chunks(team_name, uuid, chunks, embeddings)
-        # 6. Чистим старые отчёты в коллекции
+        # 5. Чистим старые отчёты в коллекции
         maintain_last_n_reports(team_name, n=3, current_uuid=uuid)
-        # 7. Получаем чанки из предыдущих двух отчётов
+        # 6. Получаем чанки из предыдущих двух отчётов
         prev_chunks = get_prev_report_chunks(team_name, exclude_uuid=uuid, limit=2)
 
-        # 8. Подготавливаем flat-список всех кейсов для аналитики и графика
+        # 7. Подготавливаем flat-список всех кейсов для аналитики и графика
         all_cases = []
         if isinstance(report, list):
             all_cases.extend(report)
@@ -62,13 +53,21 @@ async def analyze_uuid(req: AnalyzeRequest):
             else:
                 all_cases.append(prev)
 
-        # 9. Генерируем график тренда
-        img_path = plot_trends(all_cases, team_name)
+        # 8. Генерируем график тренда и трендовые данные
+        img_path, trend = plot_trends(all_cases, team_name)
+        # Формируем текст тренда для LLM
+        if trend:
+            trend_text = "\n".join([
+                f"{day}: passed={data['passed']}, failed={data['failed']}, skipped={data['skipped']}"
+                for day, data in sorted(trend.items())
+            ])
+        else:
+            trend_text = "Нет данных по динамике запусков."
 
-        # 10. Генерируем анализ с помощью LLM (через Ollama)
-        summary, rules = utils.analyze_cases_with_llm(all_cases, team_name, img_path)
+        # 9. Генерируем анализ с помощью LLM (через Ollama, передаём trend_text)
+        summary, rules = utils.analyze_cases_with_llm(all_cases, team_name, trend_text)
 
-        # 11. Отправляем результат обратно (или сохраняем для тестов)
+        # 10. Отправляем результат обратно (или сохраняем для тестов)
         analysis = [{"rule": rule, "message": msg} for rule, msg in rules]
         utils.send_analysis_to_allure(uuid, analysis)
         return {"result": "ok", "summary": summary, "analysis": analysis}
@@ -81,4 +80,3 @@ async def analyze_uuid(req: AnalyzeRequest):
 @app.get("/")
 async def root():
     return {"status": "ok"}
-

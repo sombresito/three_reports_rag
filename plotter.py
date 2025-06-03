@@ -5,22 +5,11 @@ import re
 from collections import Counter, defaultdict
 
 def safe_filename(name):
-    """
-    Делает имя файла безопасным для Windows и Linux:
-    - Только латиница, цифры, подчеркивание
-    - Ограничение длины (до 40 символов)
-    """
     name = name.encode("ascii", "ignore").decode("ascii")
     name = re.sub(r'\W+', '_', name)
     return name[:40]
 
 def plot_trends(cases, team_name):
-    """
-    Строит график тренда passed/failed/skipped по датам.
-    cases: список тест-кейсов (dict)
-    team_name: имя команды (будет в названии файла)
-    """
-    # Сбор дат и статусов
     dates = []
     statuses = []
     for case in cases:
@@ -36,13 +25,11 @@ def plot_trends(cases, team_name):
         statuses.append(case.get("status", "unknown"))
         dates.append(dt)
 
-    # Оставляем только валидные даты
     filtered = [(d, s) for d, s in zip(dates, statuses) if d]
     if not filtered:
         print("[PLOT] Нет данных для построения тренда!")
-        return None
+        return None, {}
 
-    # Группируем по дню
     date_to_status = defaultdict(list)
     for d, s in filtered:
         day = d.date()
@@ -62,12 +49,10 @@ def plot_trends(cases, team_name):
     failed = [trend[d]["failed"] for d in days]
     skipped = [trend[d]["skipped"] for d in days]
 
-    # Готовим папку и путь к файлу
     plot_name = safe_filename(team_name)
     os.makedirs("plots", exist_ok=True)
     img_path = f"plots/trend_{plot_name}.png"
 
-    # Строим график
     plt.figure(figsize=(8, 4))
     plt.plot(days, passed, label="Passed", marker='o')
     plt.plot(days, failed, label="Failed", marker='o')
@@ -81,4 +66,4 @@ def plot_trends(cases, team_name):
     plt.savefig(img_path)
     plt.close()
     print(f"[PLOT] Saved trend plot: {img_path}")
-    return img_path
+    return img_path, trend

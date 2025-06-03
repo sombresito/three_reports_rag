@@ -23,21 +23,16 @@ def send_analysis_to_allure(uuid, analysis):
     if resp.status_code != 200:
         raise Exception(f"Failed to send analysis: {resp.text}")
 
-def analyze_cases_with_llm(all_cases, team_name, img_path=None):
-    """
-    Анализирует тест-кейсы с помощью локального Ollama (через LLM_MODEL).
-    """
+def analyze_cases_with_llm(all_cases, team_name, trend_text=None):
     ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
     llm_model = os.getenv("LLM_MODEL", "gemma3:4b")
 
-    # Готовим промпт
     text = f"Тестовые кейсы команды {team_name}:\n"
-    for i, case in enumerate(all_cases[:20]):  # Для большого отчёта хватит первых 20
+    for i, case in enumerate(all_cases[:20]):  # Можно больше/меньше
         text += f"{i+1}. {case.get('name', 'без имени')} - статус: {case.get('status', '')}\n"
-
-    text += "\nСделай краткое резюме по стабильности тестов, выдели проблемные зоны и дай 2-3 рекомендации.\nОтвет дай на русском, коротко, по сути."
-    if img_path:
-        text += f"\nК графику тренда (смотри файл): {img_path}"
+    if trend_text:
+        text += f"\nДинамика тестов по датам:\n{trend_text}\n"
+    text += "\nСделай краткое резюме по стабильности тестов, выдели проблемные зоны и дай 2-3 рекомендации. Ответ дай на русском, коротко и по делу."
 
     payload = {
         "model": llm_model,
@@ -52,7 +47,6 @@ def analyze_cases_with_llm(all_cases, team_name, img_path=None):
     except Exception as e:
         summary = f"Ошибка вызова LLM: {e}"
 
-    # В простом виде возвращаем одно правило с summary, можно парсить на правила и рекомендации по своему вкусу
     rules = [
         ("auto-analysis", summary)
     ]
