@@ -39,4 +39,7 @@ async def analyze_uuid(req: AnalyzeRequest):
         utils.send_analysis_to_allure(uuid, analysis)
         return {"result": "ok", "analysis": analysis}
     except Exception as e:
+        print("=== TRACEBACK START ===")
+        traceback.print_exc()
+        print("=== TRACEBACK END ===")
         raise HTTPException(status_code=500, detail=str(e))

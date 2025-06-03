@@ -7,7 +7,7 @@ def get_model():
     global _MODEL
     if _MODEL is None:
         model_path = os.getenv("EMBEDDING_MODEL_PATH")
-        _MODEL = SentenceTransformer(model_path, local_files_only=True)
+        _MODEL = SentenceTransformer(model_path)
     return _MODEL
 
 def generate_embeddings(chunks):
