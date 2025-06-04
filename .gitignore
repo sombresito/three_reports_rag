@@ -9,3 +9,4 @@ __pycache__/
 *.pyd
 local_models/
 plots/
+qdrant/
