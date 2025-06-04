@@ -1,0 +1,29 @@
+version: "3"
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.14.1
+    ports:
+      - "6333:6333"
+    volumes:
+      - ./qdrant_data:/qdrant/storage
+
+  rag_app:
+    build: .
+    depends_on:
+      - qdrant
+    environment:
+      QDRANT_HOST: qdrant         # важно: docker-сервис, не localhost!
+      QDRANT_PORT: 6333
+      OLLAMA_URL: "http://host.docker.internal:11434/api/generate"  # если Ollama работает на хосте!
+      LLM_MODEL: "gemma3:4b"
+      # (другие env из .env при желании)
+    volumes:
+      - ./local_models:/app/local_models
+      - ./plots:/app/plots
+      - ./reports:/app/reports
+      - ./analysis:/app/analysis
+      - ./qdrant_data:/qdrant_data
+      - ./qdrant:/app/qdrant  # если нужен доступ к папке с qdrant.exe
+      # (можно добавить volume с .env, если используешь его)
+    ports:
+      - "8001:8001"

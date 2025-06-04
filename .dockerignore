@@ -1,0 +1,11 @@
+__pycache__/
+.venv/
+*.pyc
+*.pyo
+*.pyd
+local_models/
+plots/
+qdrant/
+*.db
+.DS_Store
+*.log
