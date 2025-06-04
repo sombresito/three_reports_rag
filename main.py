@@ -13,6 +13,9 @@ from chunker import chunk_report
 from embedder import generate_embeddings
 from plotter import plot_trends
 import utils
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI()
 

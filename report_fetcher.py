@@ -3,7 +3,7 @@ from requests.auth import HTTPBasicAuth
 from utils import get_env
 
 def fetch_allure_report(uuid: str) -> dict:
-    url = f"{get_env('ALLURE_API_REPORT_ENDPOINT')}/{uuid}/suites/json"
+    url = f"{get_env('ALLURE_API_REPORT_ENDPOINT')}/{uuid}/test-cases/aggregate"
     user = get_env('ALLURE_API_USER')
     pwd = get_env('ALLURE_API_PASSWORD')
     resp = requests.get(url, auth=HTTPBasicAuth(user, pwd))

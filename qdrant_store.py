@@ -50,7 +50,9 @@ def ensure_collection(client, collection, vector_size):
         print(f"[QDRANT] Collection exists: '{collection}'")
 
 def save_report_chunks(team: str, uuid: str, chunks, embeddings):
-    client = get_client()
+    print("QDRANT_HOST =", os.getenv("QDRANT_HOST"))
+    print("QDRANT_PORT =", os.getenv("QDRANT_PORT"))
+    client = get_client()    
     collection = normalize_collection_name(team)
     vector_size = embeddings.shape[1] if hasattr(embeddings, 'shape') else len(embeddings[0])
     ensure_collection(client, collection, vector_size)
