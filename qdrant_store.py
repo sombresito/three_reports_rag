@@ -9,7 +9,7 @@ import requests
 
 def get_client():
     return qdrant_client.QdrantClient(
-        host=os.getenv("QDRANT_HOST", "localhost"),
+        host=os.getenv("QDRANT_HOST", "qdrant"),
         port=int(os.getenv("QDRANT_PORT", 6333))
     )
 
@@ -41,7 +41,7 @@ def to_qdrant_id(uid):
     return str(uuid.uuid5(uuid.NAMESPACE_URL, str(uid)))
 
 def ensure_collection(client, collection, vector_size):
-    r = requests.get("http://127.0.0.1:6333/collections")
+    r = requests.get("http://qdrant:6333//collections")
     print("[QDRANT RAW]", r.status_code, r.text)
     existing_collections = [col.name for col in client.get_collections().collections]
     if collection not in existing_collections:
@@ -75,7 +75,7 @@ def get_prev_report_chunks(team: str, exclude_uuid: str, limit=2):
     print("[QDRANT] client.get_collections() call")
     client = get_client()
     collection = normalize_collection_name(team)
-    r = requests.get("http://127.0.0.1:6333/collections")
+    r = requests.get("http://qdrant:6333//collections")
     print("[QDRANT RAW]", r.status_code, r.text)
     existing_collections = [col.name for col in client.get_collections().collections]
     if collection not in existing_collections:
@@ -97,7 +97,7 @@ def maintain_last_n_reports(team, n, current_uuid):
     print("[QDRANT] client.get_collections() call")
     client = get_client()
     collection = normalize_collection_name(team)
-    r = requests.get("http://127.0.0.1:6333/collections")
+    r = requests.get("http://qdrant:6333//collections")
     print("[QDRANT RAW]", r.status_code, r.text)
     existing_collections = [col.name for col in client.get_collections().collections]
     if collection not in existing_collections:

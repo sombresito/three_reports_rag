@@ -10,3 +10,6 @@ __pycache__/
 local_models/
 plots/
 qdrant/
+analysis/
+qdrant_data/
+reports/
