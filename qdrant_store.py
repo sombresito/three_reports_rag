@@ -72,26 +72,24 @@ def save_report_chunks(team: str, uuid: str, chunks, embeddings):
     client.upsert(collection_name=collection, points=points)
 
 def get_prev_report_chunks(team: str, exclude_uuid: str, limit=2):
-    print("[QDRANT] client.get_collections() call")
     client = get_client()
-    collection = normalize_collection_name(team)
-    r = requests.get("http://qdrant:6333//collections")
-    print("[QDRANT RAW]", r.status_code, r.text)
-    existing_collections = [col.name for col in client.get_collections().collections]
-    if collection not in existing_collections:
-        print(f"[QDRANT] Collection '{collection}' does not exist, returning []")
-        return []
-    res = client.scroll(collection_name=collection, limit=1000)
+    collection = team
+    try:
+        res = client.scroll(collection_name=collection, limit=1000)
+    except Exception as e:
+        # Если коллекция есть, но points нет — ловим 404 и возвращаем пусто!
+        print(f"[QDRANT] scroll exception: {e}")
+        return {}
     reports = {}
     for point in res[0]:
-        uuid_ = point.payload.get("report_uuid")
-        if uuid_ and uuid_ != exclude_uuid:
-            if uuid_ not in reports:
-                reports[uuid_] = []
-            reports[uuid_].append(point.payload)
-    prev_uuids = list(reports.keys())[:limit]
-    print(f"[QDRANT] get_prev_report_chunks: Found {len(prev_uuids)} uuids in '{collection}'")
-    return [reports[u] for u in prev_uuids]
+        uuid = point.payload.get("report_uuid")
+        if uuid and uuid != exclude_uuid:
+            if uuid not in reports:
+                reports[uuid] = []
+            reports[uuid].append(point.payload)
+    prev_uuids = sorted(reports.keys(), reverse=True)[:limit]
+    return {u: reports[u] for u in prev_uuids}
+
 
 def maintain_last_n_reports(team, n, current_uuid):
     print("[QDRANT] client.get_collections() call")
