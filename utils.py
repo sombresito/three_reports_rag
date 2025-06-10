@@ -131,7 +131,15 @@ def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_pa
     ) if step_counter else "нет"
 
     # --- Mandatory fields validation ---
-    mandatory_fields = ["name", "status", "uid"]
+    mandatory_fields = [
+        "name",
+        "status",
+        "uid",
+        "description",
+        "owner",
+        "labels",
+        "jira",
+    ]
     missing = []
     for c in cases:
         miss = [f for f in mandatory_fields if not c.get(f)]
@@ -151,7 +159,7 @@ def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_pa
         f"Флейки: {flaky_count}\n"
         f"Дубли тестов: {duplicates_info}\n"
         f"Повторяющиеся шаги: {common_steps}\n"
-        f"Обязательные поля: {missing_summary}\n"
+        f"Обязательные поля (name, status, uid, description, owner, labels, jira): {missing_summary}\n"
     )
 
     if trend_text:
