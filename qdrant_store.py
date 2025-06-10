@@ -73,7 +73,7 @@ def save_report_chunks(team: str, uuid: str, chunks, embeddings):
 
 def get_prev_report_chunks(team: str, exclude_uuid: str, limit=2):
     client = get_client()
-    collection = team
+    collection = normalize_collection_name(team)
     try:
         res = client.scroll(collection_name=collection, limit=1000)
     except Exception as e:
