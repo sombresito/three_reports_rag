@@ -48,17 +48,15 @@ async def analyze_uuid(req: AnalyzeRequest):
         all_reports = []
         all_uuids = []
         all_teams = []
-        # prev_chunks — это список списков кейсов (по 1 отчёту)
-        for prev in prev_chunks:
-            if prev:
-                all_reports.append(prev)
-                # UUID для индивидуального тренда
-                report_uuid = prev[0].get("report_uuid", "unknown") if isinstance(prev[0], dict) else "unknown"
+        # prev_chunks — это dict {uuid: [cases]}
+        for report_uuid, chunks in prev_chunks.items():
+            if chunks:
+                all_reports.append(chunks)
                 all_uuids.append(report_uuid)
-                # Название команды
+                # Название команды из labels первого кейса
                 team = None
-                if isinstance(prev[0], dict) and prev[0].get("labels"):
-                    for lbl in prev[0]["labels"]:
+                if isinstance(chunks[0], dict) and chunks[0].get("labels"):
+                    for lbl in chunks[0]["labels"]:
                         if lbl.get("name") == "suite":
                             team = lbl.get("value")
                             break
