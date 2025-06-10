@@ -1,6 +1,9 @@
+import logging
 import requests
 from requests.auth import HTTPBasicAuth
 from utils import get_env
+
+logger = logging.getLogger(__name__)
 
 def _flatten_suites(node, cases):
     if isinstance(node, dict):
