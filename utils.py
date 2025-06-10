@@ -23,21 +23,149 @@ def send_analysis_to_allure(uuid, analysis):
     if resp.status_code != 200:
         raise Exception(f"Failed to send analysis: {resp.text}")
 
-def analyze_cases_with_llm(all_cases, team_name, trend_text=None):
+def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_path=None):
+    """Invoke LLM to analyse provided test cases.
+
+    Parameters
+    ----------
+    all_reports : list
+        List of test case lists (current + previous reports).
+    team_name : str
+        Name of the team.
+    trend_text : str, optional
+        Textual representation of trends for the LLM.
+    trend_img_path : str, optional
+        Path to the trend image created by :mod:`plotter`.
+    """
+
+    from collections import Counter, defaultdict
+    from datetime import datetime
+    from plotter import flatten_report
+
     ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
     llm_model = os.getenv("LLM_MODEL", "gemma3:4b")
 
-    text = f"Тестовые кейсы команды {team_name}:\n"
-    for i, case in enumerate(all_cases[:20]):  # Можно больше/меньше
-        text += f"{i+1}. {case.get('name', 'без имени')} - статус: {case.get('status', '')}\n"
+    # "all_reports" may contain nested lists, flatten them
+    cases = []
+    for rep in all_reports:
+        cases.extend(flatten_report(rep))
+
+    # --- Run periods & environment/initiators info ---
+    starts, stops = [], []
+    env_info = defaultdict(set)
+    initiators = set()
+    for c in cases:
+        t = c.get("time") or {}
+        if isinstance(t.get("start"), (int, float)):
+            starts.append(t["start"])
+        if isinstance(t.get("stop"), (int, float)):
+            stops.append(t["stop"])
+        for lbl in c.get("labels", []):
+            name = lbl.get("name")
+            val = lbl.get("value")
+            if not name or val is None:
+                continue
+            if name in {"host", "thread", "framework", "language", "browser", "os", "env"}:
+                env_info[name].add(val)
+            if name in {"owner", "user", "initiator"}:
+                initiators.add(val)
+
+    run_period = "неизвестно"
+    if starts and stops:
+        start = datetime.fromtimestamp(min(starts)).isoformat()
+        stop = datetime.fromtimestamp(max(stops)).isoformat()
+        run_period = f"{start} – {stop}"
+
+    env_str = ", ".join(f"{k}:{','.join(sorted(v))}" for k, v in env_info.items()) or "неизвестно"
+    initiators_str = ", ".join(sorted(initiators)) or "неизвестно"
+
+    # --- Status distribution ---
+    status_counts = Counter((c.get("status") or "unknown").lower() for c in cases)
+    total = sum(status_counts.values()) or 1
+    status_parts = [
+        f"{s}={cnt} ({cnt * 100 / total:.1f}%)" for s, cnt in status_counts.items()
+    ]
+    status_summary = "; ".join(status_parts)
+
+    # --- Problematic areas ---
+    error_clusters = Counter()
+    locator_failures = 0
+    flaky_count = 0
+    for c in cases:
+        if c.get("flaky"):
+            flaky_count += 1
+        status = (c.get("status") or "").lower()
+        if status in {"failed", "broken"}:
+            msg = c.get("statusMessage") or ""
+            trace = c.get("statusTrace") or ""
+            key = (msg.splitlines()[0] if msg else trace.splitlines()[0])[:120]
+            if key:
+                error_clusters[key] += 1
+            if "no such element" in trace.lower() or "nosuchelement" in trace.lower() or "element not found" in msg.lower():
+                locator_failures += 1
+
+    top_errors = "; ".join(
+        f"{m} x{c}" for m, c in error_clusters.most_common(3)
+    ) or "нет"
+
+    # --- Optimisation hints ---
+    name_counter = Counter(c.get("name") for c in cases if c.get("name"))
+    duplicates = [n for n, c in name_counter.items() if c > 1]
+    duplicates_info = ", ".join(duplicates) if duplicates else "нет"
+
+    step_counter = Counter()
+
+    def _collect_steps(steps):
+        if not steps:
+            return
+        for st in steps:
+            if st.get("name"):
+                step_counter[st["name"]] += 1
+            _collect_steps(st.get("steps"))
+
+    for c in cases:
+        _collect_steps(c.get("steps"))
+
+    common_steps = ", ".join(
+        f"{n} x{c}" for n, c in step_counter.most_common(3)
+    ) if step_counter else "нет"
+
+    # --- Mandatory fields validation ---
+    mandatory_fields = ["name", "status", "uid"]
+    missing = []
+    for c in cases:
+        miss = [f for f in mandatory_fields if not c.get(f)]
+        if miss:
+            missing.append(f"{c.get('uid', '?')}: {', '.join(miss)}")
+    missing_summary = "; ".join(missing) if missing else "нет"
+
+    # --- Form prompt for LLM ---
+    text = (
+        f"Команда: {team_name}\n"
+        f"Период запуска: {run_period}\n"
+        f"Окружение: {env_str}\n"
+        f"Инициаторы: {initiators_str}\n\n"
+        f"Статусы: {status_summary}\n"
+        f"Ошибки: {top_errors}\n"
+        f"Не найдено локаторов: {locator_failures}\n"
+        f"Флейки: {flaky_count}\n"
+        f"Дубли тестов: {duplicates_info}\n"
+        f"Повторяющиеся шаги: {common_steps}\n"
+        f"Обязательные поля: {missing_summary}\n"
+    )
+
     if trend_text:
-        text += f"\nДинамика тестов по датам:\n{trend_text}\n"
-    text += "\nСделай краткое резюме по стабильности тестов, выдели проблемные зоны и дай 2-3 рекомендации. Ответ дай на русском, коротко и по делу."
+        text += f"\nТренд по датам:\n{trend_text}\n"
+    if trend_img_path:
+        text += f"\nИзображение тренда находится по пути: {trend_img_path}\n"
+
+    text += ("\nСделай вывод о стабильности тестов, ключевых проблемах и дай краткие рекомендации."
+             " Ответ дай на русском, по существу.")
 
     payload = {
         "model": llm_model,
         "prompt": text,
-        "stream": False
+        "stream": False,
     }
     try:
         response = requests.post(ollama_url, json=payload, timeout=120)
@@ -50,6 +178,9 @@ def analyze_cases_with_llm(all_cases, team_name, trend_text=None):
     rules = [
         ("auto-analysis", summary)
     ]
+    if trend_img_path:
+        rules.append(("trend-graph", trend_img_path))
+
     return summary, rules
 
 

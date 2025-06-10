@@ -89,7 +89,7 @@ async def analyze_uuid(req: AnalyzeRequest):
              for i, rep in enumerate(all_reports)]
         )
 
-        summary, rules = utils.analyze_cases_with_llm(all_reports, team_name, trend_text)
+        summary, rules = utils.analyze_cases_with_llm(all_reports, team_name, trend_text, img_path)
         analysis = [{"rule": rule, "message": msg} for rule, msg in rules]
         utils.send_analysis_to_allure(uuid, analysis)
 
