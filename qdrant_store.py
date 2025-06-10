@@ -63,7 +63,7 @@ def save_report_chunks(team: str, uuid: str, chunks, embeddings):
     ensure_collection(client, collection, vector_size)
     points = [
         PointStruct(
-            id=to_qdrant_id(chunk["uid"]),  # <-- универсальный, совместимый с Qdrant ID
+            id=to_qdrant_id(f"{uuid}-{chunk['uid']}"),  # уникальный ID для каждой попытки теста
             vector=embeddings[idx].tolist(),
             payload={**chunk, "report_uuid": uuid}
         ) for idx, chunk in enumerate(chunks)
