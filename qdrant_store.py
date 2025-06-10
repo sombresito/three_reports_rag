@@ -66,7 +66,7 @@ def save_report_chunks(team: str, uuid: str, chunks, embeddings, timestamp):
         PointStruct(
             id=to_qdrant_id(f"{uuid}-{chunk['uid']}"),  # уникальный ID для каждой попытки теста
             vector=embeddings[idx].tolist(),
-            payload={**chunk, "report_uuid": uuid, "timestamp": chunk.get("timestamp", 0)}
+            payload={**chunk, "report_uuid": uuid, "timestamp": timestamp}
         ) for idx, chunk in enumerate(chunks)
     ]
     logger.info("[QDRANT] Upserting %s points into '%s'", len(points), collection)
