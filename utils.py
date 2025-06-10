@@ -72,8 +72,14 @@ def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_pa
 
     run_period = "неизвестно"
     if starts and stops:
-        start = datetime.fromtimestamp(min(starts)).isoformat()
-        stop = datetime.fromtimestamp(max(stops)).isoformat()
+        start_ts = min(starts)
+        stop_ts = max(stops)
+        if start_ts > 1e10:
+            start_ts /= 1000.0
+        if stop_ts > 1e10:
+            stop_ts /= 1000.0
+        start = datetime.fromtimestamp(start_ts).isoformat()
+        stop = datetime.fromtimestamp(stop_ts).isoformat()
         run_period = f"{start} – {stop}"
 
     env_str = ", ".join(f"{k}:{','.join(sorted(v))}" for k, v in env_info.items()) or "неизвестно"
