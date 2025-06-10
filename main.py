@@ -1,4 +1,5 @@
 import os
+import logging
 import traceback
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -14,6 +15,8 @@ from embedder import generate_embeddings
 from plotter import plot_trends_for_reports
 import utils
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -95,9 +98,7 @@ async def analyze_uuid(req: AnalyzeRequest):
 
         return {"result": "ok", "summary": summary, "analysis": analysis}
     except Exception as e:
-        print("=== TRACEBACK START ===")
-        traceback.print_exc()
-        print("=== TRACEBACK END ===")
+        logger.exception("Unhandled exception while processing UUID %s", uuid)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/")
