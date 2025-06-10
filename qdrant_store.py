@@ -110,11 +110,18 @@ def maintain_last_n_reports(team, n, current_uuid):
     uuids = {}
     for point in res[0]:
         uuid_ = point.payload.get("report_uuid")
+        if not uuid_:
+            continue
         ts = point.payload.get("timestamp", 0)
         if uuid_ not in uuids:
-            uuids[uuid_] = []
-        uuids[uuid_].append(point.id)
-    uuids_list = sorted(uuids.keys(), reverse=True)
+            uuids[uuid_] = {"timestamp": ts, "ids": []}
+        else:
+            if ts < uuids[uuid_]["timestamp"]:
+                uuids[uuid_]["timestamp"] = ts
+        uuids[uuid_]["ids"].append(point.id)
+    uuids_list = sorted(
+        uuids.keys(), key=lambda u: uuids[u]["timestamp"], reverse=True
+    )
 
     # Keep the most recent n reports including the current one
     keep = set()
@@ -128,7 +135,7 @@ def maintain_last_n_reports(team, n, current_uuid):
     if to_delete:
         logger.info("[QDRANT] Deleting reports: %s", to_delete)
         for u in to_delete:
-            client.delete(collection_name=collection, points_selector={"points": uuids[u]})
+            client.delete(collection_name=collection, points_selector={"points": uuids[u]["ids"]})
     else:
         logger.debug(
             "[QDRANT] No reports to delete in '%s' (current count: %s)",
