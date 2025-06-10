@@ -35,13 +35,15 @@ async def analyze_uuid(req: AnalyzeRequest):
             raise HTTPException(status_code=400, detail="Report JSON must be a list of test-cases")
         # 2. Получаем чанки и имя команды
         chunks, team_name = chunk_report(report)
+        starts = [c.get("time", {}).get("start") for c in report if isinstance(c.get("time", {}).get("start"), (int, float))]
+        timestamp = int(min(starts)) if starts else 0
         if not team_name:
             team_name = "default_team"
 
         # 3. Генерируем эмбеддинги
         embeddings = generate_embeddings(chunks)
         # 4. Сохраняем чанки и эмбеддинги в Qdrant
-        save_report_chunks(team_name, uuid, chunks, embeddings)
+        save_report_chunks(team_name, uuid, chunks, embeddings, timestamp)
         # 5. Чистим старые отчёты в коллекции
         maintain_last_n_reports(team_name, n=REPORTS_HISTORY_DEPTH, current_uuid=uuid)
         # 6. Получаем чанки из предыдущих отчётов (от старого к новому!)

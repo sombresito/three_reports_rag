@@ -53,7 +53,7 @@ def ensure_collection(client, collection, vector_size):
     else:
         print(f"[QDRANT] Collection exists: '{collection}'")
 
-def save_report_chunks(team: str, uuid: str, chunks, embeddings):
+def save_report_chunks(team: str, uuid: str, chunks, embeddings, timestamp: int):
     print("QDRANT_HOST =", os.getenv("QDRANT_HOST"))
     print("QDRANT_PORT =", os.getenv("QDRANT_PORT"))
     print("[QDRANT] client.get_collections() call")
@@ -65,7 +65,7 @@ def save_report_chunks(team: str, uuid: str, chunks, embeddings):
         PointStruct(
             id=to_qdrant_id(f"{uuid}-{chunk['uid']}"),  # уникальный ID для каждой попытки теста
             vector=embeddings[idx].tolist(),
-            payload={**chunk, "report_uuid": uuid}
+            payload={**chunk, "report_uuid": uuid, "timestamp": timestamp}
         ) for idx, chunk in enumerate(chunks)
     ]
     print(f"[QDRANT] Upserting {len(points)} points into '{collection}'")
@@ -84,11 +84,17 @@ def get_prev_report_chunks(team: str, exclude_uuid: str, limit=2):
     for point in res[0]:
         uuid = point.payload.get("report_uuid")
         if uuid and uuid != exclude_uuid:
+            ts = point.payload.get("timestamp", 0)
             if uuid not in reports:
-                reports[uuid] = []
-            reports[uuid].append(point.payload)
-    prev_uuids = sorted(reports.keys(), reverse=True)[:limit]
-    return {u: reports[u] for u in prev_uuids}
+                reports[uuid] = {"timestamp": ts, "chunks": []}
+            else:
+                if ts < reports[uuid]["timestamp"]:
+                    reports[uuid]["timestamp"] = ts
+            reports[uuid]["chunks"].append(point.payload)
+    sorted_reports = sorted(
+        reports.items(), key=lambda x: x[1]["timestamp"], reverse=True
+    )[:limit]
+    return {uid: data["chunks"] for uid, data in sorted_reports}
 
 
 def maintain_last_n_reports(team, n, current_uuid):
@@ -105,13 +111,19 @@ def maintain_last_n_reports(team, n, current_uuid):
     uuids = {}
     for point in res[0]:
         uuid_ = point.payload.get("report_uuid")
+        ts = point.payload.get("timestamp", 0)
         if uuid_ not in uuids:
-            uuids[uuid_] = []
-        uuids[uuid_].append(point.id)
-    uuids_list = sorted(uuids.keys(), reverse=True)
+            uuids[uuid_] = {"ids": [], "timestamp": ts}
+        uuids[uuid_]["ids"].append(point.id)
+        if ts < uuids[uuid_]["timestamp"]:
+            uuids[uuid_]["timestamp"] = ts
+    uuids_list = sorted(
+        uuids.items(), key=lambda x: x[1]["timestamp"], reverse=True
+    )
     if len(uuids_list) > n:
-        print(f"[QDRANT] Deleting reports: {uuids_list[n:]}")
-        for u in uuids_list[n:]:
-            client.delete(collection_name=collection, points_selector={"points": uuids[u]})
+        to_delete = [u for u, _ in uuids_list[n:]]
+        print(f"[QDRANT] Deleting reports: {to_delete}")
+        for u in to_delete:
+            client.delete(collection_name=collection, points_selector={"points": uuids[u]["ids"]})
     else:
         print(f"[QDRANT] No reports to delete in '{collection}' (current count: {len(uuids_list)})")
