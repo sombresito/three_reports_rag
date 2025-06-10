@@ -54,7 +54,7 @@ def ensure_collection(client, collection, vector_size):
     else:
         logger.debug("[QDRANT] Collection exists: '%s'", collection)
 
-def save_report_chunks(team: str, uuid: str, chunks, embeddings):
+def save_report_chunks(team: str, uuid: str, chunks, embeddings, timestamp):
     logger.debug("QDRANT_HOST = %s", os.getenv("QDRANT_HOST"))
     logger.debug("QDRANT_PORT = %s", os.getenv("QDRANT_PORT"))
     logger.debug("[QDRANT] client.get_collections() call")
@@ -66,7 +66,7 @@ def save_report_chunks(team: str, uuid: str, chunks, embeddings):
         PointStruct(
             id=to_qdrant_id(f"{uuid}-{chunk['uid']}"),  # уникальный ID для каждой попытки теста
             vector=embeddings[idx].tolist(),
-            payload={**chunk, "report_uuid": uuid, "timestamp": timestamp}
+            payload={**chunk, "report_uuid": uuid, "timestamp": chunk.get("timestamp", 0)}
         ) for idx, chunk in enumerate(chunks)
     ]
     logger.info("[QDRANT] Upserting %s points into '%s'", len(points), collection)
