@@ -17,19 +17,32 @@ def _flatten_suites(node, cases):
 
 def fetch_allure_report(uuid: str) -> list:
     base = get_env("ALLURE_API_REPORT_ENDPOINT")
-    url = f"{base}/{uuid}/suites/json"
-    print("[FETCH]", url)
-    user = get_env('ALLURE_API_USER')
-    pwd = get_env('ALLURE_API_PASSWORD')
-    resp = requests.get(url, auth=HTTPBasicAuth(user, pwd))
-    print("[FETCH STATUS]", resp.status_code)
-    print("[FETCH TEXT]", resp.text[:500])
-    if resp.status_code != 200:
+    # Report path may vary between Allure versions. Allow overriding via env.
+    # By default we try the newer "/test-cases/aggregate" endpoint and fall back
+    # to the older "/suites/json" path for compatibility.
+    main_path = get_env("ALLURE_API_REPORT_PATH", "/test-cases/aggregate")
+    paths = [main_path]
+    if main_path != "/suites/json":
+        paths.append("/suites/json")
+
+    user = get_env("ALLURE_API_USER")
+    pwd = get_env("ALLURE_API_PASSWORD")
+    resp = None
+    data = None
+    for path in paths:
+        path = "/" + path.lstrip("/")
+        url = f"{base}/{uuid}{path}"
+        print("[FETCH]", url)
+        resp = requests.get(url, auth=HTTPBasicAuth(user, pwd))
+        print("[FETCH STATUS]", resp.status_code)
+        print("[FETCH TEXT]", resp.text[:500])
+        if resp.status_code == 200:
+            data = resp.json()
+            break
+    if resp is None or resp.status_code != 200:
         raise Exception(
             f"Allure report {uuid} not found, status: {resp.status_code}"
         )
-
-    data = resp.json()
 
     # API /suites/json returns hierarchical suites. Convert to flat list of test cases
     cases = []
