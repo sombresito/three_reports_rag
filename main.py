@@ -17,6 +17,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# How many reports should be kept and compared (current + previous ones)
+REPORTS_HISTORY_DEPTH = int(os.getenv("REPORTS_HISTORY_DEPTH", 3))
+
 app = FastAPI()
 
 class AnalyzeRequest(BaseModel):
@@ -40,9 +43,10 @@ async def analyze_uuid(req: AnalyzeRequest):
         # 4. Сохраняем чанки и эмбеддинги в Qdrant
         save_report_chunks(team_name, uuid, chunks, embeddings)
         # 5. Чистим старые отчёты в коллекции
-        maintain_last_n_reports(team_name, n=3, current_uuid=uuid)
-        # 6. Получаем чанки из предыдущих двух отчётов (от старого к новому!)
-        prev_chunks = get_prev_report_chunks(team_name, exclude_uuid=uuid, limit=2)
+        maintain_last_n_reports(team_name, n=REPORTS_HISTORY_DEPTH, current_uuid=uuid)
+        # 6. Получаем чанки из предыдущих отчётов (от старого к новому!)
+        prev_limit = max(REPORTS_HISTORY_DEPTH - 1, 0)
+        prev_chunks = get_prev_report_chunks(team_name, exclude_uuid=uuid, limit=prev_limit)
 
         # 7. Собираем для plotter: 2 prev + текущий
         all_reports = []
@@ -66,11 +70,11 @@ async def analyze_uuid(req: AnalyzeRequest):
         all_uuids.append(uuid)
         all_teams.append(team_name)
 
-        # Оставляем только последние 3 (если вдруг больше)
-        if len(all_reports) > 3:
-            all_reports = all_reports[-3:]
-            all_uuids = all_uuids[-3:]
-            all_teams = all_teams[-3:]
+        # Оставляем только последние REPORTS_HISTORY_DEPTH (если вдруг больше)
+        if len(all_reports) > REPORTS_HISTORY_DEPTH:
+            all_reports = all_reports[-REPORTS_HISTORY_DEPTH:]
+            all_uuids = all_uuids[-REPORTS_HISTORY_DEPTH:]
+            all_teams = all_teams[-REPORTS_HISTORY_DEPTH:]
 
         # 8. Генерируем все тренды (и индивидуальные bar, и summary line)
         img_path = plot_trends_for_reports(all_reports, all_uuids, all_teams)
