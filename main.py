@@ -97,6 +97,8 @@ async def analyze_uuid(req: AnalyzeRequest):
 
         summary, rules = utils.analyze_cases_with_llm(all_reports, team_name, trend_text, img_path)
         analysis = [{"rule": rule, "message": msg} for rule, msg in rules]
+        # Prepend the report summary for Allure consumers
+        analysis.insert(0, {"rule": "report-info", "message": report_info})
         utils.send_analysis_to_allure(uuid, analysis)
 
         return {"result": "ok", "report_info": report_info, "summary": summary, "analysis": analysis}
