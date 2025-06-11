@@ -14,7 +14,7 @@ services:
     environment:
       QDRANT_HOST: qdrant         # важно: docker-сервис, не localhost!
       QDRANT_PORT: 6333
-      OLLAMA_URL: "http://ollama:11434/api/generate"
+      OLLAMA_URL: "http://localhost:11434/api/generate"
       LLM_MODEL: "gemma3:4b"
       # (другие env из .env при желании)
     volumes:
