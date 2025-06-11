@@ -131,5 +131,7 @@ def format_reports_summary(reports: List[List[Dict[str, Any]]], color: bool = Tr
         if info["duplicates"]:
             dups = ", ".join(info["duplicates"])
             lines.append(f"Дубликаты в отчете {ts}: {dups}")
+        else:
+            lines.append(f"Дубликаты в отчете {ts}: нет")
     return "\n".join(lines)
 
