@@ -11,6 +11,7 @@ from report_fetcher import fetch_allure_report
 from chunker import chunk_report
 from embedder import generate_embeddings
 from plotter import plot_trends_for_reports
+from report_summary import format_reports_summary
 import utils
 from dotenv import load_dotenv
 
@@ -80,7 +81,8 @@ async def analyze_uuid(req: AnalyzeRequest):
             all_uuids = all_uuids[-REPORTS_HISTORY_DEPTH:]
             all_teams = all_teams[-REPORTS_HISTORY_DEPTH:]
 
-        # 8. Генерируем все тренды (и индивидуальные bar, и summary line)
+        # 8. Генерируем сводку по отчетам и тренды
+        report_info = format_reports_summary(all_reports, color=False)
         img_path = plot_trends_for_reports(all_reports, all_uuids, all_teams)
 
         # 9. Формируем текстовую аналитику
@@ -97,7 +99,7 @@ async def analyze_uuid(req: AnalyzeRequest):
         analysis = [{"rule": rule, "message": msg} for rule, msg in rules]
         utils.send_analysis_to_allure(uuid, analysis)
 
-        return {"result": "ok", "summary": summary, "analysis": analysis}
+        return {"result": "ok", "report_info": report_info, "summary": summary, "analysis": analysis}
     except Exception as e:
         logger.exception("Unhandled exception while processing UUID %s", uuid)
         raise HTTPException(status_code=500, detail=str(e))
