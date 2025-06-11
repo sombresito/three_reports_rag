@@ -93,7 +93,10 @@ def get_prev_report_chunks(team: str, exclude_uuid: str, limit=2):
     sorted_reports = sorted(
         reports.items(), key=lambda x: x[1]["timestamp"], reverse=True
     )[:limit]
-    return {uid: data["chunks"] for uid, data in sorted_reports}
+    return {
+        uid: {"timestamp": data["timestamp"], "chunks": data["chunks"]}
+        for uid, data in sorted_reports
+    }
 
 
 def maintain_last_n_reports(team, n, current_uuid):

@@ -49,14 +49,15 @@ async def analyze_uuid(req: AnalyzeRequest):
         maintain_last_n_reports(team_name, n=REPORTS_HISTORY_DEPTH, current_uuid=uuid)
         # 6. Получаем чанки из предыдущих отчётов (от старого к новому!)
         prev_limit = max(REPORTS_HISTORY_DEPTH - 1, 0)
-        prev_chunks = get_prev_report_chunks(team_name, exclude_uuid=uuid, limit=prev_limit)
+        prev_reports = get_prev_report_chunks(team_name, exclude_uuid=uuid, limit=prev_limit)
 
         # 7. Собираем для plotter: 2 prev + текущий
         all_reports = []
         all_uuids = []
         all_teams = []
-        # prev_chunks — это dict {uuid: [cases]}
-        for report_uuid, chunks in prev_chunks.items():
+        # prev_reports — это dict {uuid: {"timestamp": ts, "chunks": [...]}}
+        for report_uuid, data in prev_reports.items():
+            chunks = data.get("chunks", [])
             if chunks:
                 all_reports.append(chunks)
                 all_uuids.append(report_uuid)
