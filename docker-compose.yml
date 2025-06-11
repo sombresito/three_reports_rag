@@ -7,20 +7,14 @@ services:
     volumes:
       - ./qdrant_data:/qdrant/storage
 
-  ollama:
-    image: ollama/ollama
-    ports:
-      - "11434:11434"
-
   rag_app:
     build: .
     depends_on:
       - qdrant
-      - ollama
     environment:
       QDRANT_HOST: qdrant         # важно: docker-сервис, не localhost!
       QDRANT_PORT: 6333
-      OLLAMA_URL: "http://ollama:11434/api/generate"
+      OLLAMA_URL: "http://host.docker.internal:11434/api/generate"
       LLM_MODEL: "gemma3:4b"
       # (другие env из .env при желании)
     volumes:

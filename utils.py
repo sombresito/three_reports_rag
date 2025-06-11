@@ -183,7 +183,7 @@ def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_pa
     }
     llm_ok = True
     try:
-        response = requests.post(ollama_url, json=payload, timeout=120)
+        response = requests.post(ollama_url, json=payload, timeout=(5, 120))
         response.raise_for_status()
         result = response.json()
         summary = result.get("response", "").strip() or result.get("message", "Нет ответа от LLM")
@@ -194,8 +194,6 @@ def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_pa
     rules = [
         ("auto-analysis", summary)
     ]
-    if trend_img_path and llm_ok:
-        rules.append(("trend-graph", trend_img_path))
 
     return summary, rules
 
