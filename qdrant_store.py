@@ -1,11 +1,9 @@
 import logging
 import qdrant_client
 from qdrant_client.models import PointStruct, Distance, VectorParams
-import numpy as np
 import os
 import re
 import uuid
-import requests
 
 logger = logging.getLogger(__name__)
 

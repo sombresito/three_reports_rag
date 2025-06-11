@@ -1,9 +1,7 @@
 import os
 import logging
-import traceback
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List
 from qdrant_store import (
     save_report_chunks,
     get_prev_report_chunks,
