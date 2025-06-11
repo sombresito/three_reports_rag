@@ -35,7 +35,9 @@ def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_pa
     trend_text : str, optional
         Textual representation of trends for the LLM.
     trend_img_path : str, optional
-        Path to the trend image created by :mod:`plotter`.
+        Path to the trend image created by :mod:`plotter`. The image is
+        returned as an Allure attachment but is not included in the LLM
+        prompt.
     """
 
     from collections import Counter, defaultdict
@@ -170,8 +172,6 @@ def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_pa
 
     if trend_text:
         text += f"\nТренд по датам:\n{trend_text}\n"
-    if trend_img_path:
-        text += f"\nИзображение тренда находится по пути: {trend_img_path}\n"
 
     text += ("\nСделай вывод о стабильности тестов, ключевых проблемах и дай краткие рекомендации."
              " Ответ дай на русском, по существу.")
