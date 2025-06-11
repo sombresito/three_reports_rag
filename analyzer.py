@@ -6,12 +6,12 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 LLM_MODEL = os.getenv("LLM_MODEL", "gemma3:4b")
 
 def analyze_reports(report, prev_reports, plot_img_path):
+    # "plot_img_path" is kept for backward compatibility but is not used in the
+    # LLM prompt. The model operates only on textual data.
     # Формируем промпт для LLM
     prompt = (
         "Ты — эксперт по автотестам. Проведи глубокий анализ текущего отчёта и сравни с предыдущими. "
-        f"Кратко: в чем основные тренды, какие ошибки повторяются, есть ли улучшения или деградация? "
-        "Выполни также статистический и визуальный анализ на основе приложенного графика по пути: "
-        f"{plot_img_path}.\n\n"
+        "Кратко: в чем основные тренды, какие ошибки повторяются, есть ли улучшения или деградация?\n\n"
         "Данные текущего отчёта:\n"
         f"{report}\n\n"
         "Данные прошлых отчётов:\n"
