@@ -82,7 +82,8 @@ async def analyze_uuid(req: AnalyzeRequest):
             all_teams = all_teams[-REPORTS_HISTORY_DEPTH:]
 
         # 8. Генерируем сводку по отчетам и тренды
-        report_info = format_reports_summary(all_reports, color=False)
+        report_info = format_reports_summary(all_reports, color=True)
+        report_info_plain = format_reports_summary(all_reports, color=False)
         img_path = plot_trends_for_reports(all_reports, all_uuids, all_teams)
 
         # 9. Формируем текстовую аналитику
@@ -98,7 +99,7 @@ async def analyze_uuid(req: AnalyzeRequest):
         summary, rules = utils.analyze_cases_with_llm(all_reports, team_name, trend_text, img_path)
         analysis = [{"rule": rule, "message": msg} for rule, msg in rules]
         # Prepend each line of the report summary for Allure consumers
-        report_lines = report_info.splitlines()
+        report_lines = report_info_plain.splitlines()
         for line in reversed(report_lines):
             analysis.insert(0, {"rule": "report-info", "message": line})
         utils.send_analysis_to_allure(uuid, analysis)
