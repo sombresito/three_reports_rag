@@ -1,6 +1,5 @@
 import requests
 import os
-from utils import get_env
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 LLM_MODEL = os.getenv("LLM_MODEL", "gemma3:4b")
