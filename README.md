@@ -41,16 +41,5 @@ You can also run everything via Docker Compose:
 docker-compose up --build
 ```
 
-### Launching the LLM container
-
-Before starting the stack, run the Ollama container so that the FastAPI service can reach the LLM:
-
-```bash
-docker run -d --name ollama -p 11434:11434 ollama/ollama
-```
-
-Once it's running, rebuild and start the rest of the services:
-
-```bash
-docker-compose up --build
-```
+The Compose stack now includes the Ollama container used for LLM requests. Simply
+run `docker-compose up` and all services, including Ollama, will start automatically.
