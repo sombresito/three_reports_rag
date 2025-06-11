@@ -120,7 +120,7 @@ def format_reports_summary(reports: List[List[Dict[str, Any]]], color: bool = Tr
     for info in infos:
         ts = info["timestamp"]
         sc = info["status_counts"]
-        status_line = " ".join(_fmt_status(s, sc.get(s, 0), color) for s in STATUS_ORDER)
+        status_line = ", ".join(_fmt_status(s, sc.get(s, 0), color) for s in STATUS_ORDER)
         lines.append(f"{ts}: {status_line}")
         if info["team_name"]:
             lines.append(f"{ts}: {info['team_name']}")
