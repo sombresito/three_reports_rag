@@ -35,10 +35,10 @@ def fetch_allure_report(uuid: str) -> list:
     for path in paths:
         path = "/" + path.lstrip("/")
         url = f"{base}/{uuid}{path}"
-        print("[FETCH]", url)
+        logger.debug("[FETCH] %s", url)
         resp = requests.get(url, auth=HTTPBasicAuth(user, pwd))
-        print("[FETCH STATUS]", resp.status_code)
-        print("[FETCH TEXT]", resp.text[:500])
+        logger.debug("[FETCH STATUS] %s", resp.status_code)
+        logger.debug("[FETCH TEXT] %s", resp.text[:500])
         if resp.status_code == 200:
             data = resp.json()
             break

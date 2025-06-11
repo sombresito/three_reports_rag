@@ -11,6 +11,7 @@ from report_fetcher import fetch_allure_report
 from chunker import chunk_report
 from embedder import generate_embeddings
 from plotter import plot_trends_for_reports
+from report_summary import format_reports_summary
 import utils
 from dotenv import load_dotenv
 
@@ -49,14 +50,15 @@ async def analyze_uuid(req: AnalyzeRequest):
         maintain_last_n_reports(team_name, n=REPORTS_HISTORY_DEPTH, current_uuid=uuid)
         # 6. Получаем чанки из предыдущих отчётов (от старого к новому!)
         prev_limit = max(REPORTS_HISTORY_DEPTH - 1, 0)
-        prev_chunks = get_prev_report_chunks(team_name, exclude_uuid=uuid, limit=prev_limit)
+        prev_reports = get_prev_report_chunks(team_name, exclude_uuid=uuid, limit=prev_limit)
 
         # 7. Собираем для plotter: 2 prev + текущий
         all_reports = []
         all_uuids = []
         all_teams = []
-        # prev_chunks — это dict {uuid: [cases]}
-        for report_uuid, chunks in prev_chunks.items():
+        # prev_reports — это dict {uuid: {"timestamp": ts, "chunks": [...]}}
+        for report_uuid, data in prev_reports.items():
+            chunks = data.get("chunks", [])
             if chunks:
                 all_reports.append(chunks)
                 all_uuids.append(report_uuid)
@@ -79,7 +81,8 @@ async def analyze_uuid(req: AnalyzeRequest):
             all_uuids = all_uuids[-REPORTS_HISTORY_DEPTH:]
             all_teams = all_teams[-REPORTS_HISTORY_DEPTH:]
 
-        # 8. Генерируем все тренды (и индивидуальные bar, и summary line)
+        # 8. Генерируем сводку по отчетам и тренды
+        report_info = format_reports_summary(all_reports, color=False)
         img_path = plot_trends_for_reports(all_reports, all_uuids, all_teams)
 
         # 9. Формируем текстовую аналитику
@@ -96,7 +99,7 @@ async def analyze_uuid(req: AnalyzeRequest):
         analysis = [{"rule": rule, "message": msg} for rule, msg in rules]
         utils.send_analysis_to_allure(uuid, analysis)
 
-        return {"result": "ok", "summary": summary, "analysis": analysis}
+        return {"result": "ok", "report_info": report_info, "summary": summary, "analysis": analysis}
     except Exception as e:
         logger.exception("Unhandled exception while processing UUID %s", uuid)
         raise HTTPException(status_code=500, detail=str(e))
