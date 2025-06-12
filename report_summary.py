@@ -68,7 +68,7 @@ def extract_report_info(report: List[Dict[str, Any]], fallback_timestamp: int = 
             val = lbl.get("value")
             if not name or val is None:
                 continue
-            if name == "suite":
+            if name == "parentSuite":
                 team_names.add(val)
             if name in {"owner", "user", "initiator"}:
                 initiators.add(val)
