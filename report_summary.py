@@ -2,6 +2,7 @@
 
 from collections import Counter
 from typing import List, Dict, Any
+from datetime import datetime
 
 
 STATUS_ORDER = ["passed", "failed", "broken", "skipped"]
@@ -12,6 +13,13 @@ ANSI_COLORS = {
     "skipped": "\033[90m",
     "reset": "\033[0m",
 }
+
+
+def _format_date(ts: int) -> str:
+    """Return dd.mm.yyyy formatted date for the given timestamp."""
+    if ts <= 0:
+        return "0"
+    return datetime.fromtimestamp(ts).strftime("%d.%m.%Y")
 
 
 def _normalize_timestamp(ts: float) -> int:
@@ -119,19 +127,20 @@ def format_reports_summary(reports: List[List[Dict[str, Any]]], color: bool = Tr
     lines = []
     for info in infos:
         ts = info["timestamp"]
+        date_str = _format_date(ts)
         sc = info["status_counts"]
         status_line = ", ".join(_fmt_status(s, sc.get(s, 0), color) for s in STATUS_ORDER)
-        lines.append(f"{ts}: {status_line}")
+        lines.append(f"{date_str}: {status_line}")
         if info["team_name"]:
-            lines.append(f"{ts}: {info['team_name']}")
+            lines.append(f"{date_str}: {info['team_name']}")
         initiators = ", ".join(info["initiators"]) if info["initiators"] else "нет"
         lines.append(f"Инициаторы: {initiators}")
         for link in info["jira_links"]:
             lines.append(f"jira: {link}")
         if info["duplicates"]:
             dups = ", ".join(info["duplicates"])
-            lines.append(f"Дубликаты в отчете {ts}: {dups}")
+            lines.append(f"Дубликаты в отчете {date_str}: {dups}")
         else:
-            lines.append(f"Дубликаты в отчете {ts}: нет")
+            lines.append(f"Дубликаты в отчете {date_str}: нет")
     return "\n".join(lines)
 
