@@ -11,4 +11,3 @@ def test_format_date_valid():
     for ts in ts_values:
         expected = datetime.fromtimestamp(ts).strftime('%d.%m.%Y')
         assert _format_date(ts) == expected
-

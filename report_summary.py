@@ -16,10 +16,10 @@ ANSI_COLORS = {
 
 
 def _format_date(ts: int) -> str:
-    """Return ``dd.mm.yyyy`` formatted date for ``ts`` seconds since epoch."""
+    """Return ``dd.mm.yyyy (HH:MM)`` formatted date for ``ts`` seconds since epoch."""
     if ts <= 0:
         ts = 0
-    return datetime.fromtimestamp(ts).strftime("%d.%m.%Y")
+    return datetime.fromtimestamp(ts).strftime("%d.%m.%Y (%H:%M)")
 
 
 def _normalize_timestamp(ts: float) -> int:
