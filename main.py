@@ -56,12 +56,15 @@ async def analyze_uuid(req: AnalyzeRequest):
         all_reports = []
         all_uuids = []
         all_teams = []
+        all_timestamps = []
         # prev_reports — это dict {uuid: {"timestamp": ts, "chunks": [...]}}
         for report_uuid, data in prev_reports.items():
             chunks = data.get("chunks", [])
+            ts = int(data.get("timestamp", 0))
             if chunks:
                 all_reports.append(chunks)
                 all_uuids.append(report_uuid)
+                all_timestamps.append(ts)
                 # Название команды из labels первого кейса
                 team = None
                 if isinstance(chunks[0], dict) and chunks[0].get("labels"):
@@ -74,16 +77,18 @@ async def analyze_uuid(req: AnalyzeRequest):
         all_reports.append(report)
         all_uuids.append(uuid)
         all_teams.append(team_name)
+        all_timestamps.append(timestamp)
 
         # Оставляем только последние REPORTS_HISTORY_DEPTH (если вдруг больше)
         if len(all_reports) > REPORTS_HISTORY_DEPTH:
             all_reports = all_reports[-REPORTS_HISTORY_DEPTH:]
             all_uuids = all_uuids[-REPORTS_HISTORY_DEPTH:]
             all_teams = all_teams[-REPORTS_HISTORY_DEPTH:]
+            all_timestamps = all_timestamps[-REPORTS_HISTORY_DEPTH:]
 
         # 8. Генерируем сводку по отчетам и тренды
-        report_info = format_reports_summary(all_reports, color=True)
-        report_info_plain = format_reports_summary(all_reports, color=False)
+        report_info = format_reports_summary(all_reports, color=True, timestamps=all_timestamps)
+        report_info_plain = format_reports_summary(all_reports, color=False, timestamps=all_timestamps)
         img_path = plot_trends_for_reports(all_reports, all_uuids, all_teams)
 
         # 9. Формируем текстовую аналитику

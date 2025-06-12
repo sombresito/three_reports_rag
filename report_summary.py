@@ -1,7 +1,7 @@
 """Utilities to summarise Allure reports."""
 
 from collections import Counter
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 
@@ -16,12 +16,9 @@ ANSI_COLORS = {
 
 
 def _format_date(ts: int) -> str:
-    """Return ``dd.mm.yyyy`` formatted date for the given timestamp.
-
-    If ``ts`` is not a positive Unix timestamp, ``"unknown"`` is returned.
-    """
+    """Return ``dd.mm.yyyy`` formatted date for ``ts`` seconds since epoch."""
     if ts <= 0:
-        return "unknown"
+        ts = 0
     return datetime.fromtimestamp(ts).strftime("%d.%m.%Y")
 
 
@@ -32,13 +29,16 @@ def _normalize_timestamp(ts: float) -> int:
     return int(ts)
 
 
-def extract_report_info(report: List[Dict[str, Any]]) -> Dict[str, Any]:
+def extract_report_info(report: List[Dict[str, Any]], fallback_timestamp: int = 0) -> Dict[str, Any]:
     """Extract key fields from an Allure report.
 
     Parameters
     ----------
     report : list
         Flat list of test case dictionaries.
+
+    fallback_timestamp : int, optional
+        Timestamp to use if cases do not contain timing information.
 
     Returns
     -------
@@ -55,9 +55,13 @@ def extract_report_info(report: List[Dict[str, Any]]) -> Dict[str, Any]:
     for case in report:
         t = case.get("time") or {}
         start = t.get("start")
+        ts_fallback = case.get("timestamp")
         if isinstance(start, (int, float)):
             if earliest is None or start < earliest:
                 earliest = start
+        elif isinstance(ts_fallback, (int, float)):
+            if earliest is None or ts_fallback < earliest:
+                earliest = ts_fallback
 
         for lbl in case.get("labels", []):
             name = lbl.get("name")
@@ -99,7 +103,9 @@ def extract_report_info(report: List[Dict[str, Any]]) -> Dict[str, Any]:
 
     duplicates = [n for n, c in name_counter.items() if c > 1]
 
-    timestamp = _normalize_timestamp(earliest or 0)
+    if earliest is None:
+        earliest = fallback_timestamp
+    timestamp = _normalize_timestamp(earliest)
     if len(team_names) == 1:
         team_name = next(iter(team_names))
     elif team_names:
@@ -124,9 +130,16 @@ def _fmt_status(s: str, cnt: int, color: bool) -> str:
     return f"{s}={cnt}"
 
 
-def format_reports_summary(reports: List[List[Dict[str, Any]]], color: bool = True) -> str:
+def format_reports_summary(
+    reports: List[List[Dict[str, Any]]],
+    color: bool = True,
+    timestamps: Optional[List[int]] = None,
+) -> str:
     """Return human readable summary for multiple reports."""
-    infos = [extract_report_info(r) for r in reports]
+    infos = []
+    for idx, r in enumerate(reports):
+        ts = timestamps[idx] if timestamps and idx < len(timestamps) else 0
+        infos.append(extract_report_info(r, fallback_timestamp=ts))
     lines = []
     for info in infos:
         ts = info["timestamp"]

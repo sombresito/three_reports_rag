@@ -12,7 +12,8 @@ def test_format_date_positive():
     assert _format_date(ts) == expected
 
 
-def test_format_date_unknown():
-    assert _format_date(0) == "unknown"
-    assert _format_date(-123) == "unknown"
+def test_format_date_non_positive():
+    expected = datetime.fromtimestamp(0).strftime('%d.%m.%Y')
+    assert _format_date(0) == expected
+    assert _format_date(-123) == expected
 
