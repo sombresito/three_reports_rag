@@ -148,7 +148,7 @@ def format_reports_summary(
         status_line = ", ".join(_fmt_status(s, sc.get(s, 0), color) for s in STATUS_ORDER)
         lines.append(f"{date_str}: {status_line}")
         if info["team_name"]:
-            lines.append(f"{date_str}: {info['team_name']}")
+            lines.append(f"Команда: {info['team_name']}")
         initiators = ", ".join(info["initiators"]) if info["initiators"] else "нет"
         lines.append(f"Инициаторы: {initiators}")
         for link in info["jira_links"]:
