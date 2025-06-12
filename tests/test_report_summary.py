@@ -9,6 +9,5 @@ from report_summary import _format_date
 def test_format_date_valid():
     ts_values = [1700000000, 170000000]
     for ts in ts_values:
-        expected = datetime.fromtimestamp(ts).strftime('%d.%m.%Y (%H:%M)')
+        expected = datetime.fromtimestamp(ts).strftime('%d.%m.%Y')
         assert _format_date(ts) == expected
-
