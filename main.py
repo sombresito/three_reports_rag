@@ -100,8 +100,9 @@ async def analyze_uuid(req: AnalyzeRequest):
         analysis = [{"rule": rule, "message": msg} for rule, msg in rules]
         # Prepend each line of the report summary for Allure consumers
         report_lines = report_info_plain.splitlines()
-        for line in reversed(report_lines):
-            analysis.insert(0, {"rule": "report-info", "message": line})
+        analysis = (
+            [{"rule": "report-info", "message": l} for l in report_lines] + analysis
+        )
         utils.send_analysis_to_allure(uuid, analysis)
 
         return {"result": "ok", "report_info": report_info, "summary": summary, "analysis": analysis}
