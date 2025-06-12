@@ -146,17 +146,17 @@ def format_reports_summary(
         date_str = _format_date(ts)
         sc = info["status_counts"]
         status_line = ", ".join(_fmt_status(s, sc.get(s, 0), color) for s in STATUS_ORDER)
-        lines.append(f"{date_str}: {status_line}")
+        lines.append(f"**{date_str}**: {status_line}")
         if info["team_name"]:
-            lines.append(f"Команда: {info['team_name']}")
+            lines.append(f"**Команда**: {info['team_name']}")
         initiators = ", ".join(info["initiators"]) if info["initiators"] else "нет"
-        lines.append(f"Инициаторы: {initiators}")
+        lines.append(f"**Инициаторы**: {initiators}")
         for link in info["jira_links"]:
-            lines.append(f"jira: {link}")
+            lines.append(f"**jira**: {link}")
         if info["duplicates"]:
             dups = ", ".join(info["duplicates"])
-            lines.append(f"Дубликаты в отчете {date_str}: {dups}")
+            lines.append(f"**Дубликаты в отчете {date_str}**: {dups}")
         else:
-            lines.append(f"Дубликаты в отчете {date_str}: нет")
+            lines.append(f"**Дубликаты в отчете {date_str}**: нет")
     return "\n".join(lines)
 
