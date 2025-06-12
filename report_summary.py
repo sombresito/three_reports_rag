@@ -16,9 +16,12 @@ ANSI_COLORS = {
 
 
 def _format_date(ts: int) -> str:
-    """Return dd.mm.yyyy formatted date for the given timestamp."""
+    """Return ``dd.mm.yyyy`` formatted date for the given timestamp.
+
+    If ``ts`` is not a positive Unix timestamp, ``"unknown"`` is returned.
+    """
     if ts <= 0:
-        return "0"
+        return "unknown"
     return datetime.fromtimestamp(ts).strftime("%d.%m.%Y")
 
 
