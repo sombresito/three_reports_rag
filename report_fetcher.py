@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 import requests
 from requests.auth import HTTPBasicAuth
 from utils import get_env
@@ -18,7 +19,9 @@ def _flatten_suites(node, cases):
             cases.append(node)
 
 
-def fetch_allure_report(uuid: str) -> list:
+def fetch_allure_report(uuid: str) -> tuple[list, int]:
+    """Return Allure report cases and the fetch timestamp."""
+
     base = get_env("ALLURE_API_REPORT_ENDPOINT")
     # Report path may vary between Allure versions. Allow overriding via env.
     # By default we try the newer "/test-cases/aggregate" endpoint and fall back
@@ -60,4 +63,5 @@ def fetch_allure_report(uuid: str) -> list:
     else:
         raise Exception("Unexpected Allure response format")
 
-    return cases
+    fetch_time = int(datetime.now().timestamp())
+    return cases, fetch_time
