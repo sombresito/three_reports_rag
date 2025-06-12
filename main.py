@@ -7,6 +7,7 @@ from qdrant_store import (
     get_prev_report_chunks,
     maintain_last_n_reports,
 )
+from datetime import datetime
 from report_fetcher import fetch_allure_report
 from chunker import chunk_report
 from embedder import generate_embeddings
@@ -37,8 +38,7 @@ async def analyze_uuid(req: AnalyzeRequest):
             raise HTTPException(status_code=400, detail="Report JSON must be a list of test-cases")
         # 2. Получаем чанки и имя команды
         chunks, team_name = chunk_report(report)
-        starts = [c.get("time", {}).get("start") for c in report if isinstance(c.get("time", {}).get("start"), (int, float))]
-        timestamp = int(min(starts)) if starts else 0
+        timestamp = int(datetime.now().timestamp())
         if not team_name:
             team_name = "default_team"
 
