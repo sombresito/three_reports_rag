@@ -16,10 +16,10 @@ ANSI_COLORS = {
 
 
 def _format_date(ts: int) -> str:
-    """Return ``dd.mm.yyyy`` formatted date for ``ts`` seconds since epoch."""
+    """Return ``dd.mm.yyyy (HH:MM)`` formatted date for ``ts`` seconds since epoch."""
     if ts <= 0:
         ts = 0
-    return datetime.fromtimestamp(ts).strftime("%d.%m.%Y")
+    return datetime.fromtimestamp(ts).strftime("%d.%m.%Y (%H:%M)")
 
 
 def _normalize_timestamp(ts: float) -> int:
@@ -68,7 +68,7 @@ def extract_report_info(report: List[Dict[str, Any]], fallback_timestamp: int = 
             val = lbl.get("value")
             if not name or val is None:
                 continue
-            if name == "suite":
+            if name == "parentSuite":
                 team_names.add(val)
             if name in {"owner", "user", "initiator"}:
                 initiators.add(val)
@@ -148,7 +148,7 @@ def format_reports_summary(
         status_line = ", ".join(_fmt_status(s, sc.get(s, 0), color) for s in STATUS_ORDER)
         lines.append(f"{date_str}: {status_line}")
         if info["team_name"]:
-            lines.append(f"{date_str}: {info['team_name']}")
+            lines.append(f"Команда: {info['team_name']}")
         initiators = ", ".join(info["initiators"]) if info["initiators"] else "нет"
         lines.append(f"Инициаторы: {initiators}")
         for link in info["jira_links"]:

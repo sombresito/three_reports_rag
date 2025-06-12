@@ -32,13 +32,12 @@ class AnalyzeRequest(BaseModel):
 async def analyze_uuid(req: AnalyzeRequest):
     uuid = req.uuid
     try:
-        # 1. Получить Allure-отчёт (JSON)
-        report = fetch_allure_report(uuid)
+        # 1. Получить Allure-отчёт (JSON) и время его получения
+        report, timestamp = fetch_allure_report(uuid)
         if not isinstance(report, list):
             raise HTTPException(status_code=400, detail="Report JSON must be a list of test-cases")
         # 2. Получаем чанки и имя команды
         chunks, team_name = chunk_report(report)
-        timestamp = int(datetime.now().timestamp())
         if not team_name:
             team_name = "default_team"
 
@@ -69,7 +68,7 @@ async def analyze_uuid(req: AnalyzeRequest):
                 team = None
                 if isinstance(chunks[0], dict) and chunks[0].get("labels"):
                     for lbl in chunks[0]["labels"]:
-                        if lbl.get("name") == "suite":
+                        if lbl.get("name") == "parentSuite":
                             team = lbl.get("value")
                             break
                 all_teams.append(team or "")
