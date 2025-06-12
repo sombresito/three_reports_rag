@@ -7,7 +7,6 @@ from qdrant_store import (
     get_prev_report_chunks,
     maintain_last_n_reports,
 )
-from datetime import datetime
 from report_fetcher import fetch_allure_report
 from chunker import chunk_report
 from embedder import generate_embeddings
@@ -88,7 +87,7 @@ async def analyze_uuid(req: AnalyzeRequest):
         # 8. Генерируем сводку по отчетам и тренды
         report_info = format_reports_summary(all_reports, color=True, timestamps=all_timestamps)
         report_info_plain = format_reports_summary(all_reports, color=False, timestamps=all_timestamps)
-        img_path = plot_trends_for_reports(all_reports, all_uuids, all_teams)
+        img_path = plot_trends_for_reports(all_reports, all_uuids, all_teams, team_name)
 
         # 9. Формируем текстовую аналитику
         # Тренд в виде строки для LLM (пример: passed=12, failed=2,... на каждый отчёт)
@@ -105,7 +104,7 @@ async def analyze_uuid(req: AnalyzeRequest):
         # Prepend each line of the report summary for Allure consumers
         report_lines = report_info_plain.splitlines()
         analysis = (
-            [{"rule": "report-info", "message": l} for l in report_lines] + analysis
+            [{"rule": "report-info", "message": line} for line in report_lines] + analysis
         )
         utils.send_analysis_to_allure(uuid, analysis)
 
