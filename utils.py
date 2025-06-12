@@ -4,8 +4,10 @@ import requests
 
 load_dotenv()
 
+
 def get_env(key, default=None):
     return os.getenv(key, default)
+
 
 def save_analysis_result(uuid, analysis):
     os.makedirs("analysis", exist_ok=True)
@@ -13,17 +15,50 @@ def save_analysis_result(uuid, analysis):
     with open(path, "w", encoding="utf-8") as f:
         f.write(str(analysis))
 
-def send_analysis_to_allure(uuid, analysis):
+
+def send_analysis_to_allure(uuid, analysis, files=None):
+    import json
     import requests
     from requests.auth import HTTPBasicAuth
+
     allure_api = f"{get_env('ALLURE_API_ANALYSIS_ENDPOINT')}/{uuid}"
-    user = get_env('ALLURE_API_USER')
-    pwd = get_env('ALLURE_API_PASSWORD')
-    resp = requests.post(allure_api, json=analysis, auth=HTTPBasicAuth(user, pwd))
+    user = get_env("ALLURE_API_USER")
+    pwd = get_env("ALLURE_API_PASSWORD")
+
+    attachments = {}
+    # Extract attachments from analysis entries if present
+    for item in analysis:
+        if isinstance(item, dict) and hasattr(item.get("attachment"), "read"):
+            key = item.get("rule", f"file{len(attachments)}")
+            attachments[key] = item["attachment"]
+            item["attachment"] = os.path.basename(
+                getattr(attachments[key], "name", "attachment")
+            )
+
+    if files:
+        attachments.update(files)
+
+    auth = HTTPBasicAuth(user, pwd)
+
+    if attachments:
+        # Multipart request with JSON part and attachments
+        multipart = {"analysis": (None, json.dumps(analysis), "application/json")}
+        for key, f in attachments.items():
+            if isinstance(f, tuple):
+                multipart[key] = f
+            else:
+                multipart[key] = (os.path.basename(getattr(f, "name", key)), f)
+        resp = requests.post(allure_api, files=multipart, auth=auth)
+    else:
+        resp = requests.post(allure_api, json=analysis, auth=auth)
+
     if resp.status_code != 200:
         raise Exception(f"Failed to send analysis: {resp.text}")
 
-def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_path=None):
+
+def analyze_cases_with_llm(
+    all_reports, team_name, trend_text=None, trend_img_path=None
+):
     """Invoke LLM to analyse provided test cases.
 
     Parameters
@@ -38,6 +73,12 @@ def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_pa
         Path to the trend image created by :mod:`plotter`. The image is
         returned as an Allure attachment but is not included in the LLM
         prompt.
+
+    Returns
+    -------
+    tuple
+        ``(summary, rules, trend_img_path)`` where ``summary`` is the text
+        response from the LLM and ``rules`` is a list of rule/message pairs.
     """
 
     from collections import Counter, defaultdict
@@ -67,7 +108,15 @@ def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_pa
             val = lbl.get("value")
             if not name or val is None:
                 continue
-            if name in {"host", "thread", "framework", "language", "browser", "os", "env"}:
+            if name in {
+                "host",
+                "thread",
+                "framework",
+                "language",
+                "browser",
+                "os",
+                "env",
+            }:
                 env_info[name].add(val)
             if name in {"owner", "user", "initiator"}:
                 initiators.add(val)
@@ -84,7 +133,10 @@ def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_pa
         stop = datetime.fromtimestamp(stop_ts).isoformat()
         run_period = f"{start} – {stop}"
 
-    env_str = ", ".join(f"{k}:{','.join(sorted(v))}" for k, v in env_info.items()) or "неизвестно"
+    env_str = (
+        ", ".join(f"{k}:{','.join(sorted(v))}" for k, v in env_info.items())
+        or "неизвестно"
+    )
     initiators_str = ", ".join(sorted(initiators)) or "неизвестно"
 
     # --- Status distribution ---
@@ -110,12 +162,16 @@ def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_pa
             key = lines[0][:120] if lines else ""
             if key:
                 error_clusters[key] += 1
-            if "no such element" in trace.lower() or "nosuchelement" in trace.lower() or "element not found" in msg.lower():
+            if (
+                "no such element" in trace.lower()
+                or "nosuchelement" in trace.lower()
+                or "element not found" in msg.lower()
+            ):
                 locator_failures += 1
 
-    top_errors = "; ".join(
-        f"{m} x{c}" for m, c in error_clusters.most_common(3)
-    ) or "нет"
+    top_errors = (
+        "; ".join(f"{m} x{c}" for m, c in error_clusters.most_common(3)) or "нет"
+    )
 
     # --- Optimisation hints ---
     name_counter = Counter(c.get("name") for c in cases if c.get("name"))
@@ -135,9 +191,11 @@ def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_pa
     for c in cases:
         _collect_steps(c.get("steps"))
 
-    common_steps = ", ".join(
-        f"{n} x{c}" for n, c in step_counter.most_common(3)
-    ) if step_counter else "нет"
+    common_steps = (
+        ", ".join(f"{n} x{c}" for n, c in step_counter.most_common(3))
+        if step_counter
+        else "нет"
+    )
 
     # --- Mandatory fields validation ---
     mandatory_fields = [
@@ -174,8 +232,10 @@ def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_pa
     if trend_text:
         text += f"\nТренд по датам:\n{trend_text}\n"
 
-    text += ("\nСделай вывод о стабильности тестов, ключевых проблемах и дай краткие рекомендации."
-             " Ответ дай на русском, по существу.")
+    text += (
+        "\nСделай вывод о стабильности тестов, ключевых проблемах и дай краткие рекомендации."
+        " Ответ дай на русском, по существу."
+    )
 
     payload = {
         "model": llm_model,
@@ -186,14 +246,12 @@ def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_pa
         response = requests.post(ollama_url, json=payload)
         response.raise_for_status()
         result = response.json()
-        summary = result.get("response", "").strip() or result.get("message", "Нет ответа от LLM")
+        summary = result.get("response", "").strip() or result.get(
+            "message", "Нет ответа от LLM"
+        )
     except Exception as e:
         summary = f"Ошибка вызова LLM: {e}"
 
-    rules = [
-        ("auto-analysis", summary)
-    ]
+    rules = [("auto-analysis", summary)]
 
-    return summary, rules
-
-
+    return summary, rules, trend_img_path

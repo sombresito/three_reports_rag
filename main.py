@@ -24,8 +24,10 @@ REPORTS_HISTORY_DEPTH = int(os.getenv("REPORTS_HISTORY_DEPTH", 3))
 
 app = FastAPI()
 
+
 class AnalyzeRequest(BaseModel):
     uuid: str
+
 
 @app.post("/uuid/analyze")
 async def analyze_uuid(req: AnalyzeRequest):
@@ -34,7 +36,9 @@ async def analyze_uuid(req: AnalyzeRequest):
         # 1. Получить Allure-отчёт (JSON) и время его получения
         report, timestamp = fetch_allure_report(uuid)
         if not isinstance(report, list):
-            raise HTTPException(status_code=400, detail="Report JSON must be a list of test-cases")
+            raise HTTPException(
+                status_code=400, detail="Report JSON must be a list of test-cases"
+            )
         # 2. Получаем чанки и имя команды
         chunks, team_name = chunk_report(report)
         if not team_name:
@@ -48,7 +52,9 @@ async def analyze_uuid(req: AnalyzeRequest):
         maintain_last_n_reports(team_name, n=REPORTS_HISTORY_DEPTH, current_uuid=uuid)
         # 6. Получаем чанки из предыдущих отчётов (от старого к новому!)
         prev_limit = max(REPORTS_HISTORY_DEPTH - 1, 0)
-        prev_reports = get_prev_report_chunks(team_name, exclude_uuid=uuid, limit=prev_limit)
+        prev_reports = get_prev_report_chunks(
+            team_name, exclude_uuid=uuid, limit=prev_limit
+        )
 
         # 7. Собираем для plotter: 2 prev + текущий
         all_reports = []
@@ -85,33 +91,52 @@ async def analyze_uuid(req: AnalyzeRequest):
             all_timestamps = all_timestamps[-REPORTS_HISTORY_DEPTH:]
 
         # 8. Генерируем сводку по отчетам и тренды
-        report_info = format_reports_summary(all_reports, color=True, timestamps=all_timestamps)
-        report_info_plain = format_reports_summary(all_reports, color=False, timestamps=all_timestamps)
+        report_info = format_reports_summary(
+            all_reports, color=True, timestamps=all_timestamps
+        )
+        report_info_plain = format_reports_summary(
+            all_reports, color=False, timestamps=all_timestamps
+        )
         img_path = plot_trends_for_reports(all_reports, all_uuids, all_teams, team_name)
 
         # 9. Формируем текстовую аналитику
         # Тренд в виде строки для LLM (пример: passed=12, failed=2,... на каждый отчёт)
         trend_text = "\n".join(
-            [f"{i+1}-й: passed={sum(1 for x in rep if (x.get('status') or '').lower() == 'passed')}, "
-             f"failed={sum(1 for x in rep if (x.get('status') or '').lower() == 'failed')}, "
-             f"broken={sum(1 for x in rep if (x.get('status') or '').lower() == 'broken')}, "
-             f"skipped={sum(1 for x in rep if (x.get('status') or '').lower() == 'skipped')}"
-             for i, rep in enumerate(all_reports)]
+            [
+                f"{i+1}-й: passed={sum(1 for x in rep if (x.get('status') or '').lower() == 'passed')}, "
+                f"failed={sum(1 for x in rep if (x.get('status') or '').lower() == 'failed')}, "
+                f"broken={sum(1 for x in rep if (x.get('status') or '').lower() == 'broken')}, "
+                f"skipped={sum(1 for x in rep if (x.get('status') or '').lower() == 'skipped')}"
+                for i, rep in enumerate(all_reports)
+            ]
         )
 
-        summary, rules = utils.analyze_cases_with_llm(all_reports, team_name, trend_text, img_path)
-        analysis = [{"rule": rule, "message": msg} for rule, msg in rules]
-        # Prepend each line of the report summary for Allure consumers
+        summary, rules, trend_img_path = utils.analyze_cases_with_llm(
+            all_reports, team_name, trend_text, img_path
+        )
+        analysis_entries = [{"rule": rule, "message": msg} for rule, msg in rules]
         report_lines = report_info_plain.splitlines()
-        analysis = (
-            [{"rule": "report-info", "message": line} for line in report_lines] + analysis
-        )
-        utils.send_analysis_to_allure(uuid, analysis)
+        with open(trend_img_path, "rb") as img_file:
+            image_entry = {"rule": "trend-image", "attachment": img_file}
+            analysis = (
+                [{"rule": "report-info", "message": line} for line in report_lines]
+                + [image_entry]
+                + analysis_entries
+            )
+            utils.send_analysis_to_allure(
+                uuid, analysis, files={"trend-image": img_file}
+            )
 
-        return {"result": "ok", "report_info": report_info, "summary": summary, "analysis": analysis}
+        return {
+            "result": "ok",
+            "report_info": report_info,
+            "summary": summary,
+            "analysis": analysis,
+        }
     except Exception as e:
         logger.exception("Unhandled exception while processing UUID %s", uuid)
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/")
 async def root():
