@@ -68,7 +68,7 @@ async def analyze_uuid(req: AnalyzeRequest):
                 team = None
                 if isinstance(chunks[0], dict) and chunks[0].get("labels"):
                     for lbl in chunks[0]["labels"]:
-                        if lbl.get("name") == "suite":
+                        if lbl.get("name") == "parentSuite":
                             team = lbl.get("value")
                             break
                 all_teams.append(team or "")

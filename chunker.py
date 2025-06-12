@@ -20,7 +20,7 @@ def chunk_report(report):
         }
         # Название команды ищем в labels
         for lbl in chunk["labels"]:
-            if lbl.get("name") == "suite":
+            if lbl.get("name") == "parentSuite":
                 team_names.add(lbl.get("value"))
         chunks.append(chunk)
     # Название команды — если одинаковое, то берём одно, иначе склеиваем

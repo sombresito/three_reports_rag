@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from report_summary import _format_date
 from report_summary import format_reports_summary
 
-def test_format_date_valid():
+            "labels": [{"name": "parentSuite", "value": team}],
     ts_values = [1700000000, 170000000]
     for ts in ts_values:
         expected = datetime.fromtimestamp(ts).strftime('%d.%m.%Y')
