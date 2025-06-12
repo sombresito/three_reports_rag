@@ -106,7 +106,8 @@ def analyze_cases_with_llm(all_reports, team_name, trend_text=None, trend_img_pa
         if status in {"failed", "broken"}:
             msg = c.get("statusMessage") or ""
             trace = c.get("statusTrace") or ""
-            key = (msg.splitlines()[0] if msg else trace.splitlines()[0])[:120]
+            lines = msg.splitlines() or trace.splitlines()
+            key = lines[0][:120] if lines else ""
             if key:
                 error_clusters[key] += 1
             if "no such element" in trace.lower() or "nosuchelement" in trace.lower() or "element not found" in msg.lower():
