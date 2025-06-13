@@ -43,3 +43,8 @@ docker-compose up --build
 
 The Compose stack now includes the Ollama container used for LLM requests. Simply
 run `docker-compose up` and all services, including Ollama, will start automatically.
+
+## Environment variables
+
+Set `ALLURE_ALLOW_ATTACHMENTS=true` to enable uploading attachments when sending
+analysis results to the Allure API. If not set, only the JSON payload is sent.

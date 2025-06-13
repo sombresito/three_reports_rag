@@ -25,6 +25,10 @@ def send_analysis_to_allure(uuid, analysis, files=None):
     user = get_env("ALLURE_API_USER")
     pwd = get_env("ALLURE_API_PASSWORD")
 
+    allow_attachments = (
+        get_env("ALLURE_ALLOW_ATTACHMENTS", "false").lower() == "true"
+    )
+
     attachments = {}
     # Extract attachments from analysis entries if present
     for item in analysis:
@@ -40,7 +44,7 @@ def send_analysis_to_allure(uuid, analysis, files=None):
 
     auth = HTTPBasicAuth(user, pwd)
 
-    if attachments:
+    if allow_attachments and attachments:
         # Multipart request with JSON part and attachments
         multipart = {"analysis": (None, json.dumps(analysis), "application/json")}
         for key, f in attachments.items():
