@@ -61,6 +61,7 @@ def test_send_analysis_with_files(monkeypatch, tmp_path):
     monkeypatch.setenv("ALLURE_API_ANALYSIS_ENDPOINT", "http://x")
     monkeypatch.setenv("ALLURE_API_USER", "u")
     monkeypatch.setenv("ALLURE_API_PASSWORD", "p")
+    monkeypatch.setenv("ALLURE_ALLOW_ATTACHMENTS", "false")
     monkeypatch.setattr(utils.requests, "post", fake_post)
 
     path = tmp_path / "trend.png"
@@ -69,6 +70,5 @@ def test_send_analysis_with_files(monkeypatch, tmp_path):
         analysis = [{"rule": "trend-image", "attachment": f}]
         utils.send_analysis_to_allure("uid", analysis, files={"trend-image": f})
 
-    assert "files" in captured
-    assert "trend-image" in captured["files"]
-    assert "analysis" in captured["files"]
+    assert "json" in captured
+    assert captured["json"] == analysis
