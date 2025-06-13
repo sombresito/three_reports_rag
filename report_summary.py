@@ -6,13 +6,6 @@ from datetime import datetime
 
 
 STATUS_ORDER = ["passed", "failed", "broken", "skipped"]
-ANSI_COLORS = {
-    "passed": "\033[32m",
-    "failed": "\033[31m",
-    "broken": "\033[33m",
-    "skipped": "\033[90m",
-    "reset": "\033[0m",
-}
 
 # HTML color mapping used when ``color=True`` is requested by
 # :func:`format_reports_summary`.  React does not understand ANSI
