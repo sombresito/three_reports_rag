@@ -14,6 +14,16 @@ ANSI_COLORS = {
     "reset": "\033[0m",
 }
 
+# HTML color mapping used when ``color=True`` is requested by
+# :func:`format_reports_summary`.  React does not understand ANSI
+# escape codes, so we output ``<span>`` tags instead.
+HTML_COLORS = {
+    "passed": "green",
+    "failed": "red",
+    "broken": "orange",
+    "skipped": "gray",
+}
+
 
 def _format_date(ts: int) -> str:
     """Return ``dd.mm.yyyy (HH:MM)`` formatted date for ``ts`` seconds since epoch."""
@@ -126,7 +136,10 @@ def extract_report_info(report: List[Dict[str, Any]], fallback_timestamp: int = 
 
 def _fmt_status(s: str, cnt: int, color: bool) -> str:
     if color:
-        return f"{ANSI_COLORS[s]}{s}={cnt}{ANSI_COLORS['reset']}"
+        html_color = HTML_COLORS.get(s)
+        if html_color:
+            return f"<span style=\"color: {html_color};\">{s}={cnt}</span>"
+        return f"{s}={cnt}"
     return f"{s}={cnt}"
 
 
